@@ -9,4 +9,5 @@ import com.talha.supermarket.model.User;
 @Repository
 public interface UserRepo extends JpaRepository<User, Long> {
     List<User> findAllByRole(com.talha.supermarket.enums.Role role);
+    java.util.Optional<User> findByEmail(String email);
 }

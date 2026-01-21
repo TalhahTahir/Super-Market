@@ -24,6 +24,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto Register(CreateUserDto Dto) {
         User u = mapper.toUser(Dto);
+        u.setPassword(u.getPassword());
         u = userRepo.save(u);
         return mapper.toUserDto(u);
     }
@@ -59,7 +60,9 @@ public class UserServiceImpl implements UserService {
         if (dto.getName() != null) existingUser.setName(dto.getName());
         if (dto.getEmail() != null) existingUser.setEmail(dto.getEmail());
         if (dto.getRole() != null) existingUser.setRole(mapper.stringToRole(dto.getRole()));
-        if (dto.getPassword() != null) existingUser.setPassword(dto.getPassword());
+        if (dto.getPassword() != null) {
+            existingUser.setPassword(dto.getPassword());
+        }
         User updatedUser = userRepo.save(existingUser);
         return mapper.toUserDto(updatedUser);
     }

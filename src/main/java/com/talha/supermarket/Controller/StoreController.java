@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,17 +40,20 @@ public class StoreController {
         return storeService.getStoresByManagerId(managerId);
     }
 
-    @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_SELLER')")
+    @PostMapping("/create")
     public StoreDto createStore(@RequestBody StoreDto dto) {
         return storeService.createStore(dto);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SELLER')")
     @PutMapping("/{id}")
     public StoreDto updateStore(@PathVariable Long id, @RequestBody StoreDto dto) {
         dto.setId(id);
         return storeService.updateStore(dto);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SELLER') or hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteStore(@PathVariable Long id) {
         storeService.deleteStore(id);

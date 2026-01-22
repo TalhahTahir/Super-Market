@@ -40,5 +40,17 @@ Prerequsite:
    on that controller method
    **V2.2**
 ---
+---
+---
+## 4. Basic Auth & RBAC via Database
+   create a new package -> security
+   in security create:
+        CustomUserDetails (implements UserDetails)
+        CustomUserDetailsService (implements UserDetailsService)
 
+   in SecurityConfig:
+   create a bean(dependency Injection) of CustomUserDetailsService and pass it on CustomSecurityFilterChain(.userDetailsService( here!))
+   create a @Bean of PasswordEncoder
+   apply passwordEncoder in UserServiceImpl -> create & update User method
+---
             

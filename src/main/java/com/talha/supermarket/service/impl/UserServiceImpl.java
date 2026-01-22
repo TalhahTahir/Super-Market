@@ -2,6 +2,7 @@ package com.talha.supermarket.service.impl;
 
 import java.util.List;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.talha.supermarket.MapStruct.UserMapper;
@@ -20,11 +21,12 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepo userRepo;
     private final UserMapper mapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public UserDto Register(CreateUserDto Dto) {
         User u = mapper.toUser(Dto);
-        u.setPassword(u.getPassword());
+        u.setPassword(passwordEncoder.encode(u.getPassword()));
         u = userRepo.save(u);
         return mapper.toUserDto(u);
     }
@@ -61,7 +63,7 @@ public class UserServiceImpl implements UserService {
         if (dto.getEmail() != null) existingUser.setEmail(dto.getEmail());
         if (dto.getRole() != null) existingUser.setRole(mapper.stringToRole(dto.getRole()));
         if (dto.getPassword() != null) {
-            existingUser.setPassword(dto.getPassword());
+            existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
         User updatedUser = userRepo.save(existingUser);
         return mapper.toUserDto(updatedUser);

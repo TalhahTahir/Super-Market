@@ -43,7 +43,7 @@ public class UserController {
         return userService.getUsersByRole(Role.valueOf(role.toUpperCase()));
     }
 
-    @PostMapping
+    @PostMapping("/register")
     public UserDto addUser(@RequestBody CreateUserDto dto) {
         return userService.Register(dto);
     }

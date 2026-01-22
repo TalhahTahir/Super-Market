@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,17 +55,20 @@ public class ProductController {
     public List<ProductDto> getByCategoryAndStore(@RequestParam String category, @RequestParam Long storeId) {
         return productService.getProductsByCategoryAndStoreId(category, storeId);
     }
-
-    @PostMapping
+    
+    @PreAuthorize("hasAuthority('ROLE_SELLER')")
+    @PostMapping("/create")
     public ProductDto addProduct(@RequestBody ProductDto dto) {
         return productService.addProduct(dto);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SELLER')")
     @PutMapping("/{id}")
     public ProductDto updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
         return productService.updateProduct(id, dto);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SELLER') or hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

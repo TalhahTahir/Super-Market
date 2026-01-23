@@ -25,11 +25,13 @@ public class StoreController {
 
     private final StoreService storeService;
 
+    @PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
     @GetMapping
     public List<StoreDto> getAll() {
         return storeService.getAllStores();
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SELLER') or hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public StoreDto getById(@PathVariable Long id) {
         return storeService.getStoreById(id);

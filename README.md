@@ -87,4 +87,28 @@ public ResponseEntity<?> adminEndpoint() {
    - Apply `PasswordEncoder` in **create** and **update** user methods
 
 ---
-            
+
+## 5. JWT X DB
+
+### Steps:
+
+1. Create `JwtService` class
+   - create methods like:
+      - token creation and generation
+      - data extraction
+
+2. Create `JwtAuthFilter` class
+   - extend OncePerRequstFilter
+   - implement `doFilterInternal` method
+
+3. Update `SecurityConfig`
+   - Create a Bean of `AuthenticationManager`
+   - repalce form and Basic Auth with SessionManagement (in FilterChain)
+
+4. create a endpoint for login
+   - take username and password
+   - create Authentication object
+   - pass in on `jwtService`
+
+---
+

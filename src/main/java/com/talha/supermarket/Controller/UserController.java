@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -35,6 +37,11 @@ public class UserController {
     private final JwtService jwtService;
     private final AuthenticationManager authMgr;
 
+    @GetMapping("welcome")
+    public String getMethodName() {
+        return new String("Welcome to the Supermarket API");
+    }
+    
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public List<UserDto> getAll() {

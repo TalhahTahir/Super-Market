@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.talha.supermarket.security.CustomUserDetailService;
+import com.talha.supermarket.security.OAuth2AuthenticationSuccessHandler;
 import com.talha.supermarket.util.JwtAuthFilter;
 
 
@@ -29,17 +30,20 @@ public class SecurityConfig {
 
     private final CustomUserDetailService customUserDetailService;
     private final JwtAuthFilter jwtAuthFilter;
+    private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
 
     @Bean
     SecurityFilterChain customSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((r) -> r
-                        .requestMatchers("/users/register", "/users/login", "/users/auth").permitAll()
+                        .requestMatchers("/users/register", "/users/login", "/users/auth", "/users/welcome").permitAll()
                         .anyRequest().authenticated())
                 .userDetailsService(customUserDetailService)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2SuccessHandler));
         return http.build();
     }
 

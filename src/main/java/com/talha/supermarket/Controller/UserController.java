@@ -5,15 +5,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.talha.supermarket.service.UserService;
 import com.talha.supermarket.util.JwtService;
+import com.talha.supermarket.config.BadRequestException;
 import com.talha.supermarket.dto.CreateUserDto;
 import com.talha.supermarket.dto.UserDto;
 import com.talha.supermarket.dto.UserLogin;
 import com.talha.supermarket.enums.Role;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -54,23 +58,28 @@ public class UserController {
     }
 
     @GetMapping("/by-role")
-    public List<UserDto> getByRole(@PathVariable String role) {
-        return userService.getUsersByRole(Role.valueOf(role.toUpperCase()));
+    public List<UserDto> getByRole(@RequestParam String role) {
+        try {
+            return userService.getUsersByRole(Role.valueOf(role.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid role: " + role);
+        }
     }
 
     @PostMapping("/register")
-    public UserDto addUser(@RequestBody CreateUserDto dto) {
-        return userService.Register(dto);
+    public ResponseEntity<UserDto> addUser(@Valid @RequestBody CreateUserDto dto) {
+        return new ResponseEntity<>(userService.Register(dto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public UserDto updateUser(@PathVariable Long id, @RequestBody CreateUserDto dto) {
+    public UserDto updateUser(@PathVariable Long id, @Valid @RequestBody CreateUserDto dto) {
         return userService.updateUser(id, dto);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/auth")

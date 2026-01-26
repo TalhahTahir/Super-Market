@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.talha.supermarket.MapStruct.StoreMapper;
+import com.talha.supermarket.config.ResourceNotFoundException;
 import com.talha.supermarket.dto.StoreDto;
 import com.talha.supermarket.model.Store;
 import com.talha.supermarket.repo.StoreRepo;
@@ -29,14 +30,14 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreDto getStoreById(Long id) {
         Store store = storeRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Store not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Store", id));
         return mapper.toStoreDto(store);
     }
 
     @Override
     public StoreDto updateStore(StoreDto storeDto) {
         Store existingStore = storeRepo.findById(storeDto.getId())
-            .orElseThrow(() -> new RuntimeException("Store not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Store", storeDto.getId()));
 
         if (storeDto.getName() != null) existingStore.setName(storeDto.getName());
         if (storeDto.getLocation() != null) existingStore.setLocation(storeDto.getLocation());
@@ -48,6 +49,9 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public void deleteStore(Long id) {
+        if (!storeRepo.existsById(id)) {
+            throw new ResourceNotFoundException("Store", id);
+        }
         storeRepo.deleteById(id);
     }
 

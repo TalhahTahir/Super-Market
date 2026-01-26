@@ -144,3 +144,70 @@ Before implementing Spring Security, ensure you have:
 2. User authenticates with GitHub
 3. Success handler generates JWT token and returns it
 4. User uses JWT token in `Authorization: Bearer <token>` header for subsequent requests
+
+---
+
+## 7. Exception Handling & Validation
+
+> Implement global exception handling and input validation for consistent API responses.
+
+### Steps:
+
+1. **Add Validation Dependency** in [`pom.xml`](pom.xml):
+   ```xml
+   <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-validation</artifactId>
+   </dependency>
+   ```
+
+2. **Create Custom Exceptions** in `config` package:
+   | Class | Purpose |
+   |-------|---------|
+   | [`ResourceNotFoundException`](src/main/java/com/talha/supermarket/config/ResourceNotFoundException.java) | When entity not found (404) |
+   | [`BadRequestException`](src/main/java/com/talha/supermarket/config/BadRequestException.java) | Invalid input data (400) |
+   | [`DuplicateResourceException`](src/main/java/com/talha/supermarket/config/DuplicateResourceException.java) | Duplicate entry (409) |
+
+3. **Create [`ErrorResponse`](src/main/java/com/talha/supermarket/config/ErrorResponse.java)** DTO:
+   - Contains: timestamp, status, error, message, path, validationErrors
+
+4. **Create [`GlobalExceptionHandler`](src/main/java/com/talha/supermarket/config/GlobalExceptionHandler.java)**:
+   - Annotate with `@RestControllerAdvice`
+   - Handle all custom and common exceptions
+   - Return consistent `ErrorResponse` structure
+
+5. **Add Validation Annotations** to DTOs:
+   - [`CreateUserDto`](src/main/java/com/talha/supermarket/dto/CreateUserDto.java): `@NotBlank`, `@Email`, `@Size`
+   - [`ProductDto`](src/main/java/com/talha/supermarket/dto/ProductDto.java): `@NotBlank`, `@NotNull`, `@DecimalMin`
+   - [`StoreDto`](src/main/java/com/talha/supermarket/dto/StoreDto.java): `@NotBlank`, `@NotNull`, `@Size`
+
+6. **Update Controllers** with `@Valid` annotation on `@RequestBody` parameters
+
+### Error Response Format:
+
+```json
+{
+    "timestamp": "2024-01-26T12:00:00",
+    "status": 404,
+    "error": "Not Found",
+    "message": "User not found with id: 1",
+    "path": "/users/1",
+    "validationErrors": null
+}
+```
+
+### Validation Error Response:
+
+```json
+{
+    "timestamp": "2024-01-26T12:00:00",
+    "status": 400,
+    "error": "Validation Failed",
+    "message": "Input validation failed",
+    "path": "/users/register",
+    "validationErrors": {
+        "email": "Invalid email format",
+        "password": "Password must be at least 6 characters"
+    }
+}
+```

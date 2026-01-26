@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.talha.supermarket.MapStruct.ProductMapper;
+import com.talha.supermarket.config.BadRequestException;
+import com.talha.supermarket.config.ResourceNotFoundException;
 import com.talha.supermarket.dto.ProductDto;
 import com.talha.supermarket.enums.ProductCategory;
 import com.talha.supermarket.model.Product;
@@ -30,7 +32,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDto getProductById(Long id) {
         Product product = productRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product", id));
         return mapper.toProductDto(product);
     }
 
@@ -43,7 +45,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDto updateProduct(Long id, ProductDto proDto) {
         Product existingProduct = productRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product", id));
 
         if (proDto.getName() != null) existingProduct.setName(proDto.getName());
         if (proDto.getCategory() != null) existingProduct.setCategory(proDto.getCategory());
@@ -57,14 +59,21 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void deleteProduct(Long id) {
+        if (!productRepo.existsById(id)) {
+            throw new ResourceNotFoundException("Product", id);
+        }
         productRepo.deleteById(id);
     }
 
     @Override
     public List<ProductDto> getProductsByCategory(String category) {
-        ProductCategory productCategory = ProductCategory.valueOf(category.toUpperCase());
-        List<Product> products = productRepo.findByCategory(productCategory);
-        return products.stream().map(mapper::toProductDto).toList();
+        try {
+            ProductCategory productCategory = ProductCategory.valueOf(category.toUpperCase());
+            List<Product> products = productRepo.findByCategory(productCategory);
+            return products.stream().map(mapper::toProductDto).toList();
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid category: " + category);
+        }
     }
 
     @Override
@@ -81,8 +90,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductDto> getProductsByCategoryAndStoreId(String category, Long storeId) {
-        ProductCategory productCategory = ProductCategory.valueOf(category.toUpperCase());
-        List<Product> products = productRepo.findByCategoryAndStoreId(productCategory, storeId);
-        return products.stream().map(mapper::toProductDto).toList();
+        try {
+            ProductCategory productCategory = ProductCategory.valueOf(category.toUpperCase());
+            List<Product> products = productRepo.findByCategoryAndStoreId(productCategory, storeId);
+            return products.stream().map(mapper::toProductDto).toList();
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid category: " + category);
+        }
     }
 }

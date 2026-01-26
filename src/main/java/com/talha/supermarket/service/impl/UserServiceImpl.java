@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.talha.supermarket.MapStruct.UserMapper;
+import com.talha.supermarket.config.ResourceNotFoundException;
 import com.talha.supermarket.dto.CreateUserDto;
 import com.talha.supermarket.dto.UserDto;
 import com.talha.supermarket.enums.Role;
@@ -33,12 +34,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto findById(Long id) {
-        User u = userRepo.findById(id).orElseThrow(()-> new RuntimeException("User not found"));
+        User u = userRepo.findById(id).orElseThrow(()-> new ResourceNotFoundException("User", id));
         return mapper.toUserDto(u);
     }
 
     @Override
     public void deleteUser(Long id) {
+        if (!userRepo.existsById(id)) {
+            throw new ResourceNotFoundException("User", id);
+        }
         userRepo.deleteById(id);
     }
 
@@ -57,7 +61,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto updateUser(Long id, CreateUserDto dto) {
         User existingUser = userRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
         if (dto.getName() != null) existingUser.setName(dto.getName());
         if (dto.getEmail() != null) existingUser.setEmail(dto.getEmail());

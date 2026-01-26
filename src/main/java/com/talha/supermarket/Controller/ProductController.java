@@ -7,10 +7,13 @@ import org.springframework.web.bind.annotation.RestController;
 import com.talha.supermarket.dto.ProductDto;
 import com.talha.supermarket.service.ProductService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,19 +61,20 @@ public class ProductController {
     
     @PreAuthorize("hasAuthority('ROLE_SELLER')")
     @PostMapping("/create")
-    public ProductDto addProduct(@RequestBody ProductDto dto) {
-        return productService.addProduct(dto);
+    public ResponseEntity<ProductDto> addProduct(@Valid @RequestBody ProductDto dto) {
+        return new ResponseEntity<>(productService.addProduct(dto), HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasAuthority('ROLE_SELLER')")
     @PutMapping("/{id}")
-    public ProductDto updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
+    public ProductDto updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto dto) {
         return productService.updateProduct(id, dto);
     }
 
     @PreAuthorize("hasAuthority('ROLE_SELLER') or hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
-    public void deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
     }
 }

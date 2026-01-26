@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating... | Supermarket</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card text-center">
+            <div class="auth-logo">
+                <i class="bi bi-shop"></i>
+                <h1>Supermarket</h1>
+            </div>
+            
+            <div class="my-4">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            
+            <h5>Completing authentication...</h5>
+            <p class="text-muted">Please wait while we set up your session.</p>
+            
+            <!-- Error Alert (hidden by default) -->
+            <div id="errorAlert" class="alert alert-danger d-none mt-4" role="alert">
+                <i class="bi bi-x-circle me-2"></i>
+                <span id="errorMessage">Authentication failed. Please try again.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Utilities -->
+    <script th:src="@{/js/api.js}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const username = urlParams.get('username');
+
+            if (!token || !username) {
+                showError('Invalid authentication response. Please try again.');
+                return;
+            }
+
+            try {
+                // Store the token
+                TokenManager.setToken(token);
+
+                // Fetch user profile to get full user data
+                const user = await Api.get('/api/users/profile');
+                UserManager.setUser(user);
+
+                // Redirect to dashboard
+                window.location.href = '/dashboard';
+            } catch (error) {
+                console.error('OAuth2 callback error:', error);
+                
+                // Clear any stored data
+                TokenManager.removeToken();
+                UserManager.removeUser();
+                
+                showError(error.message || 'Failed to complete authentication. Please try again.');
+            }
+        });
+
+        function showError(message) {
+            document.querySelector('.spinner-border').classList.add('d-none');
+            document.querySelector('h5').textContent = 'Authentication Failed';
+            document.querySelector('p').innerHTML = `<a href="/login">Return to login page</a>`;
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorAlert').classList.remove('d-none');
+        }
+    </script>
+</body>
+</html>

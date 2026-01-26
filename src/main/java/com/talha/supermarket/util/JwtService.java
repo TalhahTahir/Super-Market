@@ -18,22 +18,26 @@ public class JwtService {
     
     private static final String SECRET_KEY = "3sizUolKeSSA3Pz7CUi7ftyxkhCcLpfOFMAKp0qdkhM=";
     
-    public String generateToken(String name) {
+    public String generateToken(String name, String role) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
         return createToken(name, claims);
     }
 
     private String createToken(String name, Map<String, Object> claims) {
-    
         return Jwts.builder()
             .claims(claims)
             .subject(name)
             .issuedAt(new Date(System.currentTimeMillis()))
             .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15)) // 15 minutes
             .header().add("typ", "JWT").and()
-            .signWith(getSignInKey()) // .signWith(getSignInKey(), Jwts.SIG.HS256)  // Explicit algorithm
+            .signWith(getSignInKey())
             .compact();
     }
+        public String extractRole(String token) {
+            final Claims claims = extractAllClaims(token);
+            return claims.get("role", String.class);
+        }
     
     private SecretKey getSignInKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());

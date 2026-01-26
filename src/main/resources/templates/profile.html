@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{layout :: layout(title='My Profile', content=~{::main})}">
+<main>
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">My Profile</h1>
+            <p class="text-muted mb-0">View and update your account information</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Profile Card -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" 
+                             style="width: 100px; height: 100px; font-size: 2.5rem;">
+                            <span id="profileInitial">U</span>
+                        </div>
+                    </div>
+                    <h4 class="mb-1" id="profileName">Loading...</h4>
+                    <p class="text-muted mb-3" id="profileEmail">-</p>
+                    <span class="badge badge-role" id="profileRole">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-pencil me-2"></i>Edit Profile
+                </div>
+                <div class="card-body">
+                    <!-- Success Alert -->
+                    <div id="successAlert" class="alert alert-success alert-dismissible fade show d-none" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Profile updated successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Error Alert -->
+                    <div id="errorAlert" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
+                        <i class="bi bi-x-circle me-2"></i>
+                        <span id="errorMessage"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form id="profileForm">
+                        <input type="hidden" id="userId">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       required minlength="2" maxlength="50">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h6 class="mb-3">Change Password</h6>
+                        <p class="text-muted small mb-3">Leave blank to keep your current password</p>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="password" class="form-label">New Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="password" name="password" 
+                                           minlength="6" placeholder="Enter new password">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Minimum 6 characters</small>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirmPassword" 
+                                       placeholder="Confirm new password">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" id="saveBtn">
+                                <span class="spinner-border spinner-border-sm d-none me-2" id="saveSpinner"></span>
+                                <i class="bi bi-check2 me-1"></i>Save Changes
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="loadProfile()">
+                                <i class="bi bi-x me-1"></i>Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="card mt-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Danger Zone
+                </div>
+                <div class="card-body">
+                    <h6>Delete Account</h6>
+                    <p class="text-muted small mb-3">
+                        Once you delete your account, there is no going back. Please be certain.
+                    </p>
+                    <button type="button" class="btn btn-outline-danger" id="deleteAccountBtn">
+                        <i class="bi bi-trash me-2"></i>Delete My Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Check authentication
+        if (!requireAuth()) return;
+
+        // Load profile data
+        await loadProfile();
+
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+
+        // Handle form submission
+        document.getElementById('profileForm').addEventListener('submit', handleSaveProfile);
+
+        // Handle account deletion
+        document.getElementById('deleteAccountBtn').addEventListener('click', handleDeleteAccount);
+    });
+
+    async function loadProfile() {
+        try {
+            const user = await UsersApi.getProfile();
+            
+            // Update sidebar profile card
+            document.getElementById('profileInitial').textContent = user.name.charAt(0).toUpperCase();
+            document.getElementById('profileName').textContent = user.name;
+            document.getElementById('profileEmail').textContent = user.email;
+            
+            const roleEl = document.getElementById('profileRole');
+            roleEl.textContent = user.role;
+            roleEl.className = `badge badge-role ${getRoleBadgeClass(user.role)}`;
+
+            // Fill form
+            document.getElementById('userId').value = user.id;
+            document.getElementById('name').value = user.name;
+            document.getElementById('email').value = user.email;
+            document.getElementById('password').value = '';
+            document.getElementById('confirmPassword').value = '';
+
+            // Update stored user data
+            UserManager.setUser(user);
+            updateNavbar();
+
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            Toast.error('Failed to load profile data');
+        }
+    }
+
+    async function handleSaveProfile(e) {
+        e.preventDefault();
+
+        const successAlert = document.getElementById('successAlert');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorMessage = document.getElementById('errorMessage');
+        const saveBtn = document.getElementById('saveBtn');
+        const saveSpinner = document.getElementById('saveSpinner');
+
+        // Clear previous alerts
+        successAlert.classList.add('d-none');
+        errorAlert.classList.add('d-none');
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+        // Validate passwords match
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (password && password !== confirmPassword) {
+            document.getElementById('confirmPassword').classList.add('is-invalid');
+            document.getElementById('confirmPassword').parentNode.querySelector('.invalid-feedback').textContent = 'Passwords do not match';
+            return;
+        }
+
+        // Show loading state
+        saveBtn.disabled = true;
+        saveSpinner.classList.remove('d-none');
+
+        const userId = document.getElementById('userId').value;
+        const userData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            role: UserManager.getUser().role // Keep current role
+        };
+
+        // Only include password if changed
+        if (password) {
+            userData.password = password;
+        }
+
+        try {
+            await UsersApi.update(userId, userData);
+            
+            // Show success
+            successAlert.classList.remove('d-none');
+            
+            // Reload profile to refresh data
+            await loadProfile();
+            
+            Toast.success('Profile updated successfully');
+
+        } catch (error) {
+            if (error.data && error.data.validationErrors) {
+                Object.keys(error.data.validationErrors).forEach(field => {
+                    const input = document.getElementById(field);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        const feedback = input.parentNode.querySelector('.invalid-feedback') || input.nextElementSibling;
+                        if (feedback && feedback.classList.contains('invalid-feedback')) {
+                            feedback.textContent = error.data.validationErrors[field];
+                        }
+                    }
+                });
+            } else {
+                errorMessage.textContent = error.message || 'Failed to update profile';
+                errorAlert.classList.remove('d-none');
+            }
+        } finally {
+            saveBtn.disabled = false;
+            saveSpinner.classList.add('d-none');
+        }
+    }
+
+    function handleDeleteAccount() {
+        const user = UserManager.getUser();
+        
+        Confirm.show(
+            'Delete Account',
+            `Are you sure you want to delete your account "${user.name}"? This action cannot be undone.`,
+            async () => {
+                try {
+                    await UsersApi.delete(user.id);
+                    Toast.success('Account deleted successfully');
+                    AuthApi.logout();
+                } catch (error) {
+                    Toast.error(error.message || 'Failed to delete account');
+                }
+            }
+        );
+    }
+</script>
+</html>

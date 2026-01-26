@@ -39,6 +39,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDto findByName(String name) {
+        User u = userRepo.findByName(name)
+            .orElseThrow(() -> new ResourceNotFoundException("User with name '" + name + "' not found"));
+        return mapper.toUserDto(u);
+    }
+
+    @Override
     public void deleteUser(Long id) {
         if (!userRepo.existsById(id)) {
             throw new ResourceNotFoundException("User", id);

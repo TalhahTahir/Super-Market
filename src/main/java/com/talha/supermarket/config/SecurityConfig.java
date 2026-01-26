@@ -37,13 +37,23 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((r) -> r
-                        .requestMatchers("/users/register", "/users/login", "/users/auth", "/users/welcome").permitAll()
+                        // Static resources
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        // Public API endpoints
+                        .requestMatchers("/api/users/register", "/api/users/login", "/api/users/auth", "/api/users/welcome").permitAll()
+                        // OAuth2 endpoints
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                        // Public frontend pages
+                        .requestMatchers("/", "/login", "/register", "/oauth2/callback").permitAll()
                         .anyRequest().authenticated())
                 .userDetailsService(customUserDetailService)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(oAuth2SuccessHandler));
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/oauth2/callback", false)
+                        .successHandler(oAuth2SuccessHandler)
+                        .permitAll());
         return http.build();
     }
 

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="~{layout :: layout(title='Stores', content=~{::main})}">
+<main>
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Stores</h1>
+            <p class="text-muted mb-0">Browse and manage store locations</p>
+        </div>
+        <div data-role="ADMIN,SELLER">
+            <button class="btn btn-primary" onclick="openCreateModal()">
+                <i class="bi bi-plus-circle me-2"></i>Add Store
+            </button>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="search-filter-bar">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search stores...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="myStoresOnly">
+                    <label class="form-check-label" for="myStoresOnly">My Stores Only</label>
+                </div>
+            </div>
+            <div class="col-md-3 text-end">
+                <span class="text-muted" id="storesCount">0 stores</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stores Grid -->
+    <div class="row g-4" id="storesGrid">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Store Modal (Create/Edit) -->
+    <div class="modal fade" id="storeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="storeModalTitle">Add Store</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="storeForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="storeId">
+                        
+                        <div class="mb-3">
+                            <label for="storeName" class="form-label">Store Name</label>
+                            <input type="text" class="form-control" id="storeName" required 
+                                   minlength="2" maxlength="100" placeholder="Enter store name">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="storeLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="storeLocation" required 
+                                   maxlength="200" placeholder="Enter store location">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        
+                        <div class="mb-3" id="managerSelectGroup">
+                            <label for="storeManager" class="form-label">Store Manager</label>
+                            <select class="form-select" id="storeManager" required>
+                                <option value="">Select manager</option>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveStoreBtn">
+                            <span class="spinner-border spinner-border-sm d-none me-2" id="saveStoreSpinner"></span>
+                            Save Store
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Store Detail Modal -->
+    <div class="modal fade" id="storeDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="storeDetailTitle">Store Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="storeDetailBody">
+                    <!-- Content loaded dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="#" class="btn btn-primary" id="viewProductsBtn">
+                        <i class="bi bi-box-seam me-2"></i>View Products
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:inline="javascript">
+    let allStores = [];
+    let allUsers = [];
+    let storeModal, storeDetailModal;
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Check authentication
+        if (!requireAuth()) return;
+
+        // Initialize modals
+        storeModal = new bootstrap.Modal(document.getElementById('storeModal'));
+        storeDetailModal = new bootstrap.Modal(document.getElementById('storeDetailModal'));
+
+        // Load data
+        await loadData();
+
+        // Setup search and filter
+        document.getElementById('searchInput').addEventListener('input', debounce(filterStores, 300));
+        document.getElementById('myStoresOnly').addEventListener('change', filterStores);
+
+        // Handle form submission
+        document.getElementById('storeForm').addEventListener('submit', handleSaveStore);
+
+        // Check if we need to open create modal
+        if (UrlParams.get('action') === 'new') {
+            openCreateModal();
+        }
+    });
+
+    async function loadData() {
+        try {
+            const user = UserManager.getUser();
+            
+            if (!user) {
+                console.error('No user data found');
+                Toast.error('Please login again');
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Load stores
+            allStores = await StoresApi.getAll();
+            
+            // Load users for manager selection (admin only, or self for seller)
+            if (user.role === 'ADMIN') {
+                allUsers = await UsersApi.getAll();
+            } else {
+                allUsers = [user];
+            }
+            
+            renderStores(allStores);
+            populateManagerSelect();
+        } catch (error) {
+            console.error('Error loading data:', error);
+            Toast.error('Failed to load stores');
+        }
+    }
+
+    function populateManagerSelect() {
+        const select = document.getElementById('storeManager');
+        const user = UserManager.getUser();
+        
+        // Filter to only sellers and admins who can manage stores
+        const managers = allUsers.filter(u => u.role === 'ADMIN' || u.role === 'SELLER');
+        
+        select.innerHTML = '<option value="">Select manager</option>' + 
+            managers.map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join('');
+        
+        // If seller, pre-select themselves and disable
+        if (user.role === 'SELLER') {
+            select.value = user.id;
+            select.disabled = true;
+        }
+    }
+
+    function filterStores() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const myStoresOnly = document.getElementById('myStoresOnly').checked;
+        const currentUserId = UserManager.getUser().id;
+
+        let filtered = allStores;
+
+        if (search) {
+            filtered = filtered.filter(store => 
+                store.name.toLowerCase().includes(search) || 
+                store.location.toLowerCase().includes(search)
+            );
+        }
+
+        if (myStoresOnly) {
+            filtered = filtered.filter(store => store.managerId === currentUserId);
+        }
+
+        renderStores(filtered);
+    }
+
+    function renderStores(stores) {
+        const grid = document.getElementById('storesGrid');
+        document.getElementById('storesCount').textContent = `${stores.length} store${stores.length !== 1 ? 's' : ''}`;
+
+        if (stores.length === 0) {
+            grid.innerHTML = `
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="bi bi-building"></i>
+                        <h4>No stores found</h4>
+                        <p>Try adjusting your search or create a new store.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const user = UserManager.getUser();
+        const canManage = user.role === 'ADMIN' || user.role === 'SELLER';
+
+        grid.innerHTML = stores.map(store => {
+            const manager = allUsers.find(u => u.id === store.managerId);
+            const isOwner = store.managerId === user.id;
+            const canEdit = user.role === 'ADMIN' || isOwner;
+
+            return `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded bg-primary bg-opacity-10 p-2">
+                                        <i class="bi bi-building text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-0">${store.name}</h5>
+                                        <small class="text-muted">ID: #${store.id}</small>
+                                    </div>
+                                </div>
+                                ${canEdit ? `
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="openEditModal(${store.id}); return false;">
+                                            <i class="bi bi-pencil me-2"></i>Edit
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteStore(${store.id}, '${store.name}'); return false;">
+                                            <i class="bi bi-trash me-2"></i>Delete
+                                        </a></li>
+                                    </ul>
+                                </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center text-muted mb-2">
+                                    <i class="bi bi-geo-alt me-2"></i>
+                                    <span>${store.location}</span>
+                                </div>
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="bi bi-person me-2"></i>
+                                    <span>${manager ? manager.name : 'Unknown'}</span>
+                                    ${isOwner ? '<span class="badge bg-success ms-2">You</span>' : ''}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="viewStoreDetails(${store.id})">
+                                    <i class="bi bi-eye me-1"></i>View Details
+                                </button>
+                                <a href="/products?storeId=${store.id}" class="btn btn-sm btn-primary flex-grow-1">
+                                    <i class="bi bi-box-seam me-1"></i>Products
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function openCreateModal() {
+        document.getElementById('storeModalTitle').textContent = 'Add Store';
+        document.getElementById('storeId').value = '';
+        document.getElementById('storeName').value = '';
+        document.getElementById('storeLocation').value = '';
+        
+        const user = UserManager.getUser();
+        if (user.role === 'SELLER') {
+            document.getElementById('storeManager').value = user.id;
+        } else {
+            document.getElementById('storeManager').value = '';
+        }
+
+        // Clear validation errors
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+        storeModal.show();
+    }
+
+    function openEditModal(storeId) {
+        const store = allStores.find(s => s.id === storeId);
+        if (!store) return;
+
+        document.getElementById('storeModalTitle').textContent = 'Edit Store';
+        document.getElementById('storeId').value = store.id;
+        document.getElementById('storeName').value = store.name;
+        document.getElementById('storeLocation').value = store.location;
+        document.getElementById('storeManager').value = store.managerId;
+
+        // Clear validation errors
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+        storeModal.show();
+    }
+
+    async function handleSaveStore(e) {
+        e.preventDefault();
+
+        const saveBtn = document.getElementById('saveStoreBtn');
+        const saveSpinner = document.getElementById('saveStoreSpinner');
+
+        // Clear validation errors
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+        saveBtn.disabled = true;
+        saveSpinner.classList.remove('d-none');
+
+        const storeId = document.getElementById('storeId').value;
+        const storeData = {
+            name: document.getElementById('storeName').value,
+            location: document.getElementById('storeLocation').value,
+            managerId: parseInt(document.getElementById('storeManager').value)
+        };
+
+        try {
+            if (storeId) {
+                await StoresApi.update(storeId, storeData);
+                Toast.success('Store updated successfully');
+            } else {
+                await StoresApi.create(storeData);
+                Toast.success('Store created successfully');
+            }
+            
+            storeModal.hide();
+            await loadData();
+        } catch (error) {
+            if (error.data && error.data.validationErrors) {
+                Object.keys(error.data.validationErrors).forEach(field => {
+                    const fieldMap = { name: 'storeName', location: 'storeLocation', managerId: 'storeManager' };
+                    const input = document.getElementById(fieldMap[field] || field);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        input.nextElementSibling.textContent = error.data.validationErrors[field];
+                    }
+                });
+            } else {
+                Toast.error(error.message || 'Failed to save store');
+            }
+        } finally {
+            saveBtn.disabled = false;
+            saveSpinner.classList.add('d-none');
+        }
+    }
+
+    async function viewStoreDetails(storeId) {
+        const store = allStores.find(s => s.id === storeId);
+        if (!store) return;
+
+        const manager = allUsers.find(u => u.id === store.managerId);
+
+        // Get products count for this store
+        let productsCount = 0;
+        try {
+            const products = await ProductsApi.getByStore(storeId);
+            productsCount = products.length;
+        } catch (e) {
+            console.error('Error loading products:', e);
+        }
+
+        document.getElementById('storeDetailTitle').textContent = store.name;
+        document.getElementById('viewProductsBtn').href = `/products?storeId=${storeId}`;
+        
+        document.getElementById('storeDetailBody').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="rounded bg-primary bg-opacity-10 p-3">
+                                <i class="bi bi-building text-primary" style="font-size: 2rem;"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">${store.name}</h4>
+                                <span class="text-muted">Store #${store.id}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="text-muted small">Location</label>
+                        <p class="mb-0">
+                            <i class="bi bi-geo-alt text-primary me-2"></i>
+                            ${store.location}
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="text-muted small">Manager</label>
+                        <p class="mb-0">
+                            <i class="bi bi-person text-primary me-2"></i>
+                            ${manager ? manager.name : 'Unknown'}
+                            ${manager ? `<span class="badge badge-role ${getRoleBadgeClass(manager.role)} ms-2">${manager.role}</span>` : ''}
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="bi bi-box-seam text-primary mb-2" style="font-size: 2rem;"></i>
+                            <h3 class="mb-0">${productsCount}</h3>
+                            <p class="text-muted mb-0">Products in Store</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        storeDetailModal.show();
+    }
+
+    function deleteStore(storeId, storeName) {
+        Confirm.show(
+            'Delete Store',
+            `Are you sure you want to delete "${storeName}"? This will also affect all products in this store.`,
+            async () => {
+                try {
+                    await StoresApi.delete(storeId);
+                    Toast.success('Store deleted successfully');
+                    await loadData();
+                } catch (error) {
+                    Toast.error(error.message || 'Failed to delete store');
+                }
+            }
+        );
+    }
+</script>
+</html>

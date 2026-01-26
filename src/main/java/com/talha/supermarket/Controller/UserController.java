@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;
@@ -47,9 +47,14 @@ public class UserController {
     }
     
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public List<UserDto> getAll() {
         return userService.getAllUsers();
+    }
+
+    @GetMapping("/profile")
+    public UserDto getProfile(Authentication authentication) {
+        String username = authentication.getName();
+        return userService.findByName(username);
     }
 
     @GetMapping("/{id}")
@@ -89,12 +94,20 @@ public class UserController {
                 .authenticate(new UsernamePasswordAuthenticationToken(login.getName(), login.getPassword()));
 
         if (auth.isAuthenticated()) {
-            return jwtService.generateToken(login.getName());
+            // fetch user to get role and include it in the token
+            UserDto user = userService.findByName(login.getName());
+            String role = user.getRole();
+            return jwtService.generateToken(login.getName(), role);
 
         } else {
             throw new UsernameNotFoundException("user not authenticated, cannot generate token");
         }
 
+    }
+
+    @PostMapping("/login")
+    public String login(@RequestBody UserLogin login) {
+        return getToken(login);
     }
 
 }

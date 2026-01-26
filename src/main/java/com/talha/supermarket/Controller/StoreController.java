@@ -23,12 +23,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/stores")
+@RequestMapping("/api/stores")
 public class StoreController {
 
     private final StoreService storeService;
 
-    @PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
     @GetMapping
     public List<StoreDto> getAll() {
         return storeService.getAllStores();

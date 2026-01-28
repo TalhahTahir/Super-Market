@@ -1,13 +1,17 @@
 package com.talha.supermarket.dto;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class StoreDto {
@@ -23,4 +27,6 @@ public class StoreDto {
 
     @NotNull(message = "Manager ID is required")
     private Long managerId;
+    
+    private String managerName;
 }

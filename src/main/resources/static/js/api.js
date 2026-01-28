@@ -1,23 +1,30 @@
 /**
  * API Utility Module - Handles all API calls with JWT authentication
  */
+      console.debug('Api.js loaded.....hurrah!');
 
-const API_BASE_URL = '';
+const API_BASE_URL = 'http://localhost:8080';
 const TOKEN_KEY = 'jwt_token';
 const USER_KEY = 'user_data';
 
 // Token Management
 const TokenManager = {
     getToken() {
-        return localStorage.getItem(TOKEN_KEY);
+        const token = localStorage.getItem(TOKEN_KEY);
+        console.debug('[TokenManager] getToken:', token ? 'token exists' : 'no token');
+        console.debug(USER_KEY);
+        
+        return token;
     },
 
     setToken(token) {
         localStorage.setItem(TOKEN_KEY, token);
+        console.debug('[TokenManager] setToken:', token ? 'token set' : 'no token');
     },
 
     removeToken() {
         localStorage.removeItem(TOKEN_KEY);
+        console.debug('[TokenManager] removeToken: token removed');
     },
 
     isAuthenticated() {
@@ -50,15 +57,24 @@ const TokenManager = {
 const UserManager = {
     getUser() {
         const userData = localStorage.getItem(USER_KEY);
-        return userData ? JSON.parse(userData) : null;
+        let user = null;
+        try {
+            user = userData ? JSON.parse(userData) : null;
+        } catch (e) {
+            console.error('[UserManager] getUser: failed to parse user data', e, userData);
+        }
+        console.debug('[UserManager] getUser:', user);
+        return user;
     },
 
     setUser(user) {
         localStorage.setItem(USER_KEY, JSON.stringify(user));
+        console.debug('[UserManager] setUser:', user);
     },
 
     removeUser() {
         localStorage.removeItem(USER_KEY);
+        console.debug('[UserManager] removeUser: user removed');
     },
 
     hasRole(role) {
@@ -80,6 +96,7 @@ const UserManager = {
 };
 
 // API Request Handler
+console.debug('Defining Api object...');
 const Api = {
     async request(endpoint, options = {}) {
         const url = `${API_BASE_URL}${endpoint}`;
@@ -88,10 +105,10 @@ const Api = {
         const defaultHeaders = {
             'Content-Type': 'application/json'
         };
-
+console.debug('[Api] request to', url, 'with options', options);
         if (token) {
-            defaultHeaders['Authorization'] = `Bearer ${token}`;
-        }
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+}
 
         const config = {
             ...options,
@@ -198,7 +215,11 @@ const AuthApi = {
         return await Api.post('/api/users/register', userData);
     },
 
-    logout() {
+    logout: async function() {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include' // REQUIRED to remove JSESSIONID
+        });
         TokenManager.removeToken();
         UserManager.removeUser();
         window.location.href = '/login';
@@ -212,6 +233,7 @@ const AuthApi = {
 // Users API
 const UsersApi = {
     getAll() {
+        console.debug('[UsersApi] getAll called');
         return Api.get('/api/users');
     },
 
@@ -247,7 +269,7 @@ const StoresApi = {
     },
 
     create(data) {
-        return Api.post('/api/stores', data);
+        return Api.post('/api/stores/create', data);
     },
 
     update(id, data) {

@@ -38,17 +38,38 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
 
+
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        
-        // GitHub provides "login" as the username
+
+        // Debug: print all attributes returned by GitHub
+        System.out.println("OAuth2 attributes: " + oAuth2User.getAttributes());
+
+        // GitHub provides "login" as the username, but check for numeric value
         String username = oAuth2User.getAttribute("login");
         String email = oAuth2User.getAttribute("email");
-        
-        if (username == null) {
-            username = email;
-            if (username == null) {
-                username = oAuth2User.getAttribute("name");
+
+        System.out.println("DEBUG: OAuth2 username (login): " + username);
+        // If login is numeric, try to use 'name' or 'email' instead
+        if (username != null && username.matches("\\d+")) {
+            String realName = oAuth2User.getAttribute("name");
+            if (realName != null && !realName.isBlank() && !realName.matches("\\d+")) {
+                username = realName;
+            } else if (email != null && !email.isBlank()) {
+                String emailName = email.split("@")[0];
+                if (!emailName.matches("\\d+")) {
+                    username = emailName;
+                } else {
+                    username = null;
+                }
+            } else {
+                username = null;
             }
+            System.out.println("DEBUG: Adjusted OAuth2 username: " + username);
+        }
+
+        // Fallbacks if username is still null or blank or numeric
+        if (username == null || username.isBlank() || username.matches("\\d+")) {
+            throw new RuntimeException("Could not determine a valid username from OAuth2 provider. Please ensure your GitHub account has a username or name set.");
         }
 
         // Create or find user in database
@@ -57,6 +78,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             // Create new user from OAuth2
             User newUser = new User();
             newUser.setName(username);
+            System.out.println("DEBUG: name for new user: " + newUser.getName());
             newUser.setEmail(email != null ? email : username + "@github.com");
             newUser.setPassword(passwordEncoder.encode("oauth2_" + System.currentTimeMillis()));
             newUser.setRole(Role.CUSTOMER); // Default role for OAuth2 users
@@ -72,11 +94,13 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
 
         // Generate JWT token
+        System.out.println("DEBUG: Generating token for user: " + username + " with role: " + roleStr);
         String token = jwtService.generateToken(username, roleStr);
 
         // Redirect to frontend with token in URL (frontend will store it)
         String redirectUrl = "/oauth2/callback?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8) 
                             + "&username=" + URLEncoder.encode(username, StandardCharsets.UTF_8);
+        System.out.println("DEBUG: Redirect URL: " + redirectUrl);
         response.sendRedirect(redirectUrl);
     }
 }

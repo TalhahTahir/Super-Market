@@ -3,6 +3,8 @@
  */
 
 // Toast Notification System
+      console.debug('Utils.js loaded.....hurrah!');
+
 const Toast = {
     container: null,
 
@@ -273,7 +275,10 @@ const UrlParams = {
 
 // Check Authentication on Page Load
 function requireAuth() {
-    if (!TokenManager.isAuthenticated()) {
+    const isAuth = TokenManager.isAuthenticated();
+    console.debug('[requireAuth] isAuthenticated:', isAuth);
+    if (!isAuth) {
+        console.warn('[requireAuth] Not authenticated, redirecting to login');
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return false;
     }
@@ -283,9 +288,10 @@ function requireAuth() {
 // Check Role on Page Load
 function requireRole(allowedRoles) {
     if (!requireAuth()) return false;
-    
     const user = UserManager.getUser();
+    console.debug('[requireRole] user:', user, 'allowedRoles:', allowedRoles);
     if (!user || !allowedRoles.includes(user.role)) {
+        console.warn('[requireRole] User does not have required role:', user ? user.role : null);
         Toast.error('You do not have permission to access this page');
         window.location.href = '/dashboard';
         return false;

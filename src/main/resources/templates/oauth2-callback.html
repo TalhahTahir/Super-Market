@@ -47,6 +47,8 @@
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
             const username = urlParams.get('username');
+            console.log('[OAuth2 Callback] token:', token);
+            console.log('[OAuth2 Callback] username:', username);
 
             if (!token || !username) {
                 showError('Invalid authentication response. Please try again.');
@@ -59,17 +61,16 @@
 
                 // Fetch user profile to get full user data
                 const user = await Api.get('/api/users/profile');
+                console.log('[OAuth2 Callback] user profile:', user);
                 UserManager.setUser(user);
 
                 // Redirect to dashboard
                 window.location.href = '/dashboard';
             } catch (error) {
-                console.error('OAuth2 callback error:', error);
-                
+                console.error('[OAuth2 Callback] error:', error);
                 // Clear any stored data
                 TokenManager.removeToken();
                 UserManager.removeUser();
-                
                 showError(error.message || 'Failed to complete authentication. Please try again.');
             }
         });

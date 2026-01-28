@@ -15,10 +15,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.talha.supermarket.security.CustomUserDetailService;
 import com.talha.supermarket.security.OAuth2AuthenticationSuccessHandler;
 import com.talha.supermarket.util.JwtAuthFilter;
+import com.talha.supermarket.util.JwtService;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpSession;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,26 +38,81 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain customSecurityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests((r) -> r
-                        // Static resources
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                        // Public API endpoints
-                        .requestMatchers("/api/users/register", "/api/users/login", "/api/users/auth", "/api/users/welcome").permitAll()
-                        // OAuth2 endpoints
-                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-                        // Public frontend pages
-                        .requestMatchers("/", "/login", "/register", "/oauth2/callback").permitAll()
-                        .anyRequest().authenticated())
-                .userDetailsService(customUserDetailService)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/oauth2/callback", false)
-                        .successHandler(oAuth2SuccessHandler)
-                        .permitAll());
+            .csrf(AbstractHttpConfigurer::disable)
+
+            .authorizeHttpRequests(r -> r
+                // Static resources
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+
+                // Public API endpoints
+                .requestMatchers(
+                        "/api/users/register",
+                        "/api/users/login",
+                        "/api/users/auth",
+                        "/api/users/welcome"
+                ).permitAll()
+
+                // OAuth2 endpoints
+                .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+
+                // Public frontend pages
+                .requestMatchers("/", "/login", "/register", "/oauth2/callback").permitAll()
+
+                .anyRequest().authenticated()
+            )
+
+            .userDetailsService(customUserDetailService)
+
+            // Session is allowed ONLY where required (OAuth handshake)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+            )
+
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
+            // OAuth2 login
+            .oauth2Login(oauth2 -> oauth2
+                .loginPage("/login")
+                .defaultSuccessUrl("/oauth2/callback", false)
+                .successHandler(oAuth2SuccessHandler)
+            )
+
+            // ✅ PROPER LOGOUT (THIS IS THE FIX)
+            .logout(logout -> logout
+                .logoutUrl("/api/auth/logout") // frontend must call this
+                .addLogoutHandler((request, response, authentication) -> {
+
+                    // 1. Invalidate server session
+                    HttpSession session = request.getSession(false);
+                    if (session != null) {
+                        session.invalidate();
+                    }
+
+                    // 2. Clear SecurityContext
+                    SecurityContextHolder.clearContext();
+
+                    // 3. Delete JSESSIONID cookie
+                    Cookie jsession = new Cookie("JSESSIONID", null);
+                    jsession.setPath("/");
+                    jsession.setHttpOnly(true);
+                    jsession.setMaxAge(0);
+                    response.addCookie(jsession);
+
+                    // 4. (Optional) delete JWT cookie if you ever set one
+                    Cookie jwt = new Cookie("token", null);
+                    jwt.setPath("/");
+                    jwt.setMaxAge(0);
+                    response.addCookie(jwt);
+                })
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    response.setStatus(200);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"logout\": \"success\"}");
+                })
+            );
+
         return http.build();
     }
 

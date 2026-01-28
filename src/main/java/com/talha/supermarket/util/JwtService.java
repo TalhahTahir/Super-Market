@@ -21,18 +21,23 @@ public class JwtService {
     public String generateToken(String name, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
+        System.out.println("DEBUG: name in jwtservice generate token:  " + name);
         return createToken(name, claims);
     }
 
     private String createToken(String name, Map<String, Object> claims) {
-        return Jwts.builder()
+        String token = Jwts.builder()
             .claims(claims)
             .subject(name)
             .issuedAt(new Date(System.currentTimeMillis()))
-            .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15)) // 15 minutes
+            .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30)) // 30 minutes
             .header().add("typ", "JWT").and()
             .signWith(getSignInKey())
             .compact();
+
+            System.out.println("DEBUG: Generated token in jwtservice create method: " + token);
+            return token;
+            
     }
         public String extractRole(String token) {
             final Claims claims = extractAllClaims(token);
@@ -67,9 +72,10 @@ public class JwtService {
 
 private Claims extractAllClaims(String token) {
     return Jwts.parser()
-            .verifyWith(getSignInKey())
+            .verifyWith(getSignInKey())   // NOT setSigningKey
             .build()
             .parseSignedClaims(token)
             .getPayload();
 }
+
 }

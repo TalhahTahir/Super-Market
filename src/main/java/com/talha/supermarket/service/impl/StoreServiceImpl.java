@@ -8,6 +8,7 @@ import com.talha.supermarket.MapStruct.StoreMapper;
 import com.talha.supermarket.config.ResourceNotFoundException;
 import com.talha.supermarket.dto.StoreDto;
 import com.talha.supermarket.model.Store;
+import com.talha.supermarket.model.User;
 import com.talha.supermarket.repo.StoreRepo;
 import com.talha.supermarket.repo.UserRepo;
 import com.talha.supermarket.service.StoreService;
@@ -25,6 +26,12 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreDto createStore(StoreDto storeDto) {
         Store store = mapper.toStore(storeDto);
+        if (storeDto.getManagerName() != null) {
+            User user = userRepo.findByName(storeDto.getManagerName())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "name", storeDto.getManagerName()));
+            store.setManager(user);
+        }
+        System.out.println("store service impl createStore called");
         Store savedStore = storeRepo.save(store);
         StoreDto dtoResult = mapper.toStoreDto(savedStore);
         dtoResult.setManagerName(userRepo.findById(savedStore.getManager().getId()).orElseThrow(() -> new ResourceNotFoundException("User", savedStore.getManager().getId())).getName());

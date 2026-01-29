@@ -6,23 +6,16 @@ import com.talha.supermarket.model.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
-import org.mapstruct.factory.Mappers;
 
 @Mapper(componentModel = "spring")
 public interface StoreMapper {
 
-    StoreMapper INSTANCE = Mappers.getMapper(StoreMapper.class);
-
-    @Mapping(target = "managerId", source = "manager", qualifiedByName = "managerToManagerId")
+    @Mapping(target = "managerId", source = "manager.id")
+    @Mapping(target = "managerName", source = "manager.name")
     StoreDto toStoreDto(Store store);
 
     @Mapping(target = "manager", source = "managerId", qualifiedByName = "managerIdToManager")
     Store toStore(StoreDto storeDto);
-
-    @Named("managerToManagerId")
-    default Long managerToManagerId(User manager) {
-        return manager != null ? manager.getId() : null;
-    }
 
     @Named("managerIdToManager")
     default User managerIdToManager(Long managerId) {

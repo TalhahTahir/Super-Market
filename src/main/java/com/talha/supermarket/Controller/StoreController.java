@@ -49,6 +49,8 @@ public class StoreController {
     @PreAuthorize("hasAuthority('ROLE_SELLER')")
     @PostMapping("/create")
     public ResponseEntity<StoreDto> createStore(@Valid @RequestBody StoreDto dto) {
+        System.out.println("Store Controller createStore called");
+        System.out.println(dto.getName() + ", " + dto.getLocation() + ", " + dto.getManagerName());
         return new ResponseEntity<>(storeService.createStore(dto), HttpStatus.CREATED);
     }
 

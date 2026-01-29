@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('myStoresOnly').addEventListener('change', filterStores);
 
   // Handle form submission
-  document.getElementById('storeForm').addEventListener('submit', handleSaveStore);
+  const storeForm = document.getElementById('storeForm');
+  storeForm.removeEventListener('submit', handleSaveStore); // Defensive: remove if already attached
+  storeForm.addEventListener('submit', handleSaveStore);
 
   // Check if we need to open create modal
   if (UrlParams.get('action') === 'new') {
@@ -159,6 +161,7 @@ window.viewStoreDetails = function(storeId) {
 };
 
 async function handleSaveStore(event) {
+    console.log('handleSaveStore called');
   event.preventDefault();
   const form = document.getElementById('storeForm');
   const saveBtn = document.getElementById('saveStoreBtn');
@@ -171,41 +174,39 @@ async function handleSaveStore(event) {
   // Gather form data
   const name = document.getElementById('storeName').value.trim();
   const location = document.getElementById('storeLocation').value.trim();
-  let managerId = null;
-  const managerInput = document.getElementById('storeManager');
-  if (managerInput) {
-    managerId = managerInput.value;
-  } else {
-    const user = UserManager.getUser();
-    managerId = user && user.id ? user.id : null;
-  }
+  const user = UserManager.getUser();
+  const managerId = user && user.id ? user.id : null;
+  const managerName = user && user.name ? user.name : '';
 
   // Simple validation
   let valid = true;
+  const storeNameInput = document.getElementById('storeName');
+  const storeLocationInput = document.getElementById('storeLocation');
   if (!name || name.length < 2 || name.length > 100) {
-    document.getElementById('storeName').classList.add('is-invalid');
-    document.getElementById('storeName').nextElementSibling.textContent = 'Store name must be 2-100 characters.';
-    valid = false;
-  } else {
-    document.getElementById('storeName').classList.remove('is-invalid');
-  }
-  if (!location || location.length > 200) {
-    document.getElementById('storeLocation').classList.add('is-invalid');
-    document.getElementById('storeLocation').nextElementSibling.textContent = 'Location is required and max 200 characters.';
-    valid = false;
-  } else {
-    document.getElementById('storeLocation').classList.remove('is-invalid');
-  }
-  if (!managerId) {
-    if (managerInput) {
-      managerInput.classList.add('is-invalid');
-      managerInput.nextElementSibling.textContent = 'Manager is required.';
-    } else {
-      Toast.error('Manager (user) not found. Please re-login.');
+    if (storeNameInput) {
+      storeNameInput.classList.add('is-invalid');
+      if (storeNameInput.nextElementSibling) {
+        storeNameInput.nextElementSibling.textContent = 'Store name must be 2-100 characters.';
+      }
     }
     valid = false;
-  } else if (managerInput) {
-    managerInput.classList.remove('is-invalid');
+  } else if (storeNameInput) {
+    storeNameInput.classList.remove('is-invalid');
+  }
+  if (!location || location.length > 200) {
+    if (storeLocationInput) {
+      storeLocationInput.classList.add('is-invalid');
+      if (storeLocationInput.nextElementSibling) {
+        storeLocationInput.nextElementSibling.textContent = 'Location is required and max 200 characters.';
+      }
+    }
+    valid = false;
+  } else if (storeLocationInput) {
+    storeLocationInput.classList.remove('is-invalid');
+  }
+  if (!managerId) {
+    Toast.error('Manager (user) not found. Please re-login.');
+    valid = false;
   }
   if (!valid) {
     form.classList.add('was-validated');
@@ -216,7 +217,8 @@ async function handleSaveStore(event) {
   const data = {
     name,
     location,
-    managerId: Number(managerId)
+    managerId: Number(managerId),
+    managerName: managerName
   };
 
   // UI feedback
@@ -247,6 +249,12 @@ async function handleSaveStore(event) {
   }
 }
 
+// Ensure handler and modal are accessible globally (for Bootstrap and debugging)
+// Export modal and handlers to window for HTML access (after all definitions)
+window.handleSaveStore = handleSaveStore;
+window.openCreateModal = openCreateModal;
+window.storeModal = storeModal;
+
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
@@ -269,3 +277,6 @@ function openCreateModal() {
   }
   storeModal.show();
 }
+
+// Export modal and handlers to window for HTML access
+window.openCreateModal = openCreateModal;

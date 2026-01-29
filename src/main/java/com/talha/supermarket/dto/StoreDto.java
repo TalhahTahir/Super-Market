@@ -15,6 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class StoreDto {
+
     private Long id;
 
     @NotBlank(message = "Store name is required")
@@ -25,8 +26,10 @@ public class StoreDto {
     @Size(max = 200, message = "Location cannot exceed 200 characters")
     private String location;
 
-    @NotNull(message = "Manager ID is required")
+    // managerId is set from logged-in user, not required in form
     private Long managerId;
-    
+
+    @NotBlank(message = "Manager name is required")
     private String managerName;
 }
+

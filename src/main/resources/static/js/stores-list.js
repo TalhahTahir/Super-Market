@@ -222,8 +222,8 @@ async function handleSaveStore(event) {
   };
 
   // UI feedback
-  saveBtn.disabled = true;
-  spinner.classList.remove('d-none');
+  if (saveBtn) saveBtn.disabled = true;
+  if (spinner) spinner.classList.remove('d-none');
 
   try {
     const created = await StoresApi.create(data);
@@ -232,20 +232,23 @@ async function handleSaveStore(event) {
     await loadStores();
     form.reset();
   } catch (error) {
-    Toast.error('Failed to create store');
-    if (error && error.response && error.response.data && error.response.data.errors) {
+    console.error('Store creation error:', error);
+    Toast.error(error.message || 'Failed to create store');
+    if (error && error.data && error.data.errors) {
       // Show validation errors from backend
-      for (const err of error.response.data.errors) {
+      for (const err of error.data.errors) {
         const field = form.querySelector(`[id^=store${capitalizeFirstLetter(err.field)}]`);
         if (field) {
           field.classList.add('is-invalid');
-          field.nextElementSibling.textContent = err.defaultMessage || err.message;
+          if (field.nextElementSibling) {
+            field.nextElementSibling.textContent = err.defaultMessage || err.message;
+          }
         }
       }
     }
   } finally {
-    saveBtn.disabled = false;
-    spinner.classList.add('d-none');
+    if (saveBtn) saveBtn.disabled = false;
+    if (spinner) spinner.classList.add('d-none');
   }
 }
 

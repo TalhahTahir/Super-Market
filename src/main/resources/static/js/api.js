@@ -308,7 +308,7 @@ const ProductsApi = {
     },
 
     create(data) {
-        return Api.post('/api/products', data);
+        return Api.post('/api/products/create', data);
     },
 
     update(id, data) {

@@ -473,3 +473,5 @@ window.deleteProduct = function(productId, productName) {
 window.viewProductDetails = function(productId) {
   // ...implement as needed...
 };
+window.openCreateModal = openCreateModal;
+window.setView = setView;
